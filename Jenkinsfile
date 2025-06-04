@@ -19,10 +19,10 @@ pipeline{
 
     stage('Configurando Git Secret'){
       agent { node 'automation' }
-      //environment {
+      environment {
         // Definições de variáveis para uso na pipeline
         gpg_passphrase = credentials("gpg-pass")
-      //}
+      }
       steps{
         script{
         //             git secret reveal -p '$gpg_passphrase'
