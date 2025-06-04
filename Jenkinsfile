@@ -11,7 +11,7 @@ pipeline{
     stage('Repositório de Código'){
       steps{
         git credentialsId: 'gitlab',
-            url: 'git@gitlab.com:joathamp/527-php-app.git', //Nao se esqueca de alterar para a URL do SEU REPOSITORIO
+            url: 'git@github.com:davidhsv/527-php-app.git',
             branch: 'main'
         stash 'dexter-repositorio'
       }
