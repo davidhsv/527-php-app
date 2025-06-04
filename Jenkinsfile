@@ -35,9 +35,15 @@ pipeline{
     }
 
     stage('SCA - Dependency Check Scan'){
-      steps{
-        //Execução do escaneamento de dependencias
-        dependencyCheck additionalArguments: 'scan="${WORKSPACE}/" --format ALL', odcInstallation: 'dependency-check'
+      withCredentials([string(credentialsId: 'nvd-api-key',
+                              variable: 'NVD_API_KEY')]) {
+          dependencyCheck(
+              odcInstallation: 'dependency-check',
+              additionalArguments:
+                  "--scan \"${WORKSPACE}\" " +
+                  "--format ALL " +
+                  "--nvdApiKey ${NVD_API_KEY}"
+          )
       }
     }
 
