@@ -21,14 +21,14 @@ pipeline{
       agent { node 'automation' }
       //environment {
         // Definições de variáveis para uso na pipeline
-        //gpg_passphrase = credentials("gpg-pass")
+        gpg_passphrase = credentials("gpg-pass")
       //}
       steps{
         script{
         //             git secret reveal -p '$gpg_passphrase'
           sh """
             cd $WORKSPACE
-            git secret reveal
+            git secret reveal -p '$gpg_passphrase'
           """
         }
       }
