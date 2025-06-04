@@ -25,9 +25,9 @@ pipeline{
       //}
       steps{
         script{
+        //             git secret reveal -p '$gpg_passphrase'
           sh """
             cd $WORKSPACE
-//             git secret reveal -p '$gpg_passphrase'
             git secret reveal
           """
         }
