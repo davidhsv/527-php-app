@@ -34,17 +34,19 @@ pipeline{
       }
     }
 
-    stage('SCA - Dependency Check Scan'){
-      withCredentials([string(credentialsId: 'nvd-api-key',
-                              variable: 'NVD_API_KEY')]) {
-          dependencyCheck(
-              odcInstallation: 'dependency-check',
-              additionalArguments:
-                  "--scan \"${WORKSPACE}\" " +
-                  "--format ALL " +
-                  "--nvdApiKey ${NVD_API_KEY}"
-          )
-      }
+    stage('SCA - Dependency Check Scan') {
+        steps {
+            withCredentials([string(credentialsId: 'nvd-api-key',
+                                    variable: 'NVD_API_KEY')]) {
+                dependencyCheck(
+                    odcInstallation: 'dependency-check',
+                    additionalArguments:
+                        "--scan \"${WORKSPACE}\" " +          // o que escanear
+                        "--format ALL " +                    // XML + HTML
+                        "--nvdApiKey ${NVD_API_KEY}"         // <<< aqui
+                )
+            }
+        }
     }
 
     stage('SCA - Dependency Check Publish Report'){
