@@ -17,6 +17,37 @@ pipeline{
       }
     }
 
+    stage('Configurando Git Secret'){
+      agent { node 'automation' }
+      //environment {
+        // Definições de variáveis para uso na pipeline
+        //gpg_passphrase = credentials("gpg-pass")
+      //}
+      steps{
+        script{
+          sh """
+            cd $WORKSPACE
+//             git secret reveal -p '$gpg_passphrase'
+            git secret reveal
+          """
+        }
+      }
+    }
+
+    stage('SCA - Dependency Check Scan'){
+      steps{
+        //Execução do escaneamento de dependencias
+        dependencyCheck additionalArguments: 'scan="${WORKSPACE}/" --format ALL', odcInstallation: 'dependency-check'
+      }
+    }
+
+    stage('SCA - Dependency Check Publish Report'){
+      steps{
+        //Publicação do relatorio de vulnerabilidades de dependencias no Jenkins
+        dependencyCheckPublisher pattern: "dependency-check-report.xml"
+      }
+    }
+
     stage('SAST - Escaneamento com Sonarqube'){
       environment {
         // Referencia do Scanner do Sonarqube
@@ -26,10 +57,47 @@ pipeline{
         // Referencia ao Plugin do Sonarqube
         withSonarQubeEnv('sonarqube') {
           // Execução do scanner com os parametros do Sonarqube
-          sh "${scanner}/bin/sonar-scanner -Dsonar.projectKey=$NAME_APP -Dsonar.sources=${WORKSPACE}/ -Dsonar.projectVersion=${BUILD_NUMBER}"
+          sh "${scanner}/bin/sonar-scanner -Dsonar.projectKey=$NAME_APP -Dsonar.sources=${WORKSPACE}/ -Dsonar.projectVersion=${BUILD_NUMBER} -Dsonar.dependencyCheck.xmlReportPath=${WORKSPACE}/dependency-check-report.xml -Dsonar.dependencyCheck.htmlReportPath=${WORKSPACE}/dependency-check-report.html"
         }
         // Validação da Qualidade de Código
         waitForQualityGate abortPipeline: true
+      }
+    }
+
+    stage('Build Image'){
+
+      // Configuração do Agent Automation
+      agent { node 'automation' }
+
+      steps {
+        // Criando a imagem em container
+        script {
+          docker.build("$NAME_APP:${BUILD_NUMBER}", "-f dockerfiles/php7.1.dockerfile .")
+        }
+      }
+    }
+
+    stage('Artifact Repository - Trivy'){
+
+      agent { node 'automation' }
+      steps {
+        unstash 'dexter-repositorio'
+        script {
+          sh 'trivy --severity CRITICAL image $NAME_APP:${BUILD_NUMBER}'
+        }
+      }
+    }
+
+    stage('Executando Container'){
+
+      // Configuração do Agent Automation
+      agent { node 'automation' }
+
+      steps {
+        // Executando stack
+        script {
+          sh "docker-compose up -d"
+        }
       }
     }
   }
