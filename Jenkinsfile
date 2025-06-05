@@ -4,6 +4,7 @@ pipeline{
   environment {
     // Definições de variáveis para uso na pipeline
     NAME_APP = "dexter"
+    ZAP_API_KEY = credentials('api-key-owasp')
   }
 
   // Estágio de clone do repositório
@@ -113,7 +114,48 @@ pipeline{
         }
       }
     }
+
+    stage('DAST-OWASP'){
+      environment {
+        // variaveis especifcas para o OWASP ZAP
+        ZAP_PATH = "/usr/share/owasp-zap/"
+        ZAP_LOG_PATH = "$WORKSPACE"
+        APP_URL= "http://192.168.56.20"
+      }
+      steps {
+        // execução do OWASP ZAP utilizando ap-cli-v2
+        //sh 'zap-cli-v2 start -o "-config api.key=${ZAP_API_KEY} -config ajaxSpider.browserId=htmlunit -config connection.timeoutInSecs=2200 -dir ${WORKSPACE} -addoninstallall"'
+        sh """
+            java -Xmx746m -jar /usr/share/zap/zap-2.16.1.jar \
+            -daemon -port 8090 \
+            -config api.key=${ZAP_API_KEY} \
+            -config ajaxSpider.browserId=htmlunit \
+            -config connection.timeoutInSecs=2200 \
+            -dir ${WORKSPACE} -addoninstallall &
+        """
+            sleep(30)
+        // Espera até 5 minutos para o ZAP inicializar
+        sh "zap-cli-v2 status -t 3000"
+        sh "zap-cli-v2 -v spider $APP_URL"
+        sh "zap-cli-v2 -v ajax-spider $APP_URL"
+        sh "zap-cli-v2 -v active-scan -r $APP_URL"
+        sh "zap-cli-v2 report -o reports/vuln-report-${BUILD_NUMBER}.html -f html"
+        sh "zap-cli-v2 report -o reports/vuln-report-${BUILD_NUMBER}.xml -f xml"
+        sh "zap-cli-v2 shutdown"
+
+        // Publicacao dos relatorio em formato HTML
+        publishHTML([
+          allowMissing: false,
+          alwaysLinkToLastBuild: true,
+          keepAll: true,
+          reportDir: 'reports/',
+          reportFiles: 'vuln-report-${BUILD_NUMBER}.html',
+          reportName: 'OWASP ZAP - VULNERABILITY REPORT'
+        ])
+      }
+    }
   }
+
 
   // Execuções de finalização da Pipeline
   post {
