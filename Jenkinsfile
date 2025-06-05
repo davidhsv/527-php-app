@@ -40,11 +40,9 @@ pipeline{
                                     variable: 'NVD_API_KEY')]) {
                 // garantir que o workspace tem arquivo
                 // da step anterior
-                bash """
-                 ls -l ${WORKSPACE}
-                    echo "NVD_API_KEY: ${NVD_API_KEY}"
-                """
-                // Executar o Dependency Check
+                script {
+                    sh "ls -l ${WORKSPACE}"
+                }
                 dependencyCheck(
                     odcInstallation: 'dependency-check',
                     additionalArguments:
